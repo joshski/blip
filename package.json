@@ -1,0 +1,30 @@
+{
+  "name": "blip",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "pogo server/server.pogo",
+    "postinstall": "browserify client/client.pogo -t pogoify --extension .pogo -o public/client.js",
+    "watch": "watchify client/client.pogo -t pogoify --extension .pogo -o public/client.js"
+  },
+  "engines": {
+    "node": "0.10.x"
+  },
+  "author": "Josh Chisholm <joshuachisholm@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "bluebird": "^2.5.2",
+    "body-parser": "^1.10.0",
+    "browserify": "^8.0.2",
+    "express": "^4.10.6",
+    "express-session": "^1.9.3",
+    "plastiq": "git://github.com/featurist/plastiq.git",
+    "pogo": "^0.9.6",
+    "pogoify": "^0.1.1",
+    "watchify": "^2.3.0"
+  },
+  "devDependencies": {
+    "watchify": "^2.2.1"
+  }
+}

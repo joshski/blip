@@ -1,0 +1,46 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: Helvetica;
+}
+
+textarea {
+  height: 5em;
+  width: 40em;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 1.1em;
+}
+
+.editor {
+  background-color: #efefef;
+  padding: 20px;
+}
+
+.editor h2 {
+  color: #336699;
+  font-size: 1.1em;
+}
+
+.editor h3 {
+  color: #222;
+  font-size: 1em;
+  margin-bottom: 2px;
+}
+
+.editor section {
+  display: inline-block;
+  overflow: scroll;
+  vertical-align: top;
+}
+
+section.pages {
+  width: 15%;
+}
+
+section.current-page {
+  width: 30%;
+}
+
+section.widgets {
+  width: 53%;
+}
