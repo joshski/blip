@@ -1,3 +1,3 @@
-# sprout
+# blip
 
-An experimental CMS interface.
+Another CMS experiment.
