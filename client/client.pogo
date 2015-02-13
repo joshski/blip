@@ -111,8 +111,12 @@ model = {
 
   widgets = [
     {
+      name = "layout"
+      pogo = "h '.my-website' (\n  h 'h1' 'My Awesome Site'\n  model\n)"
+    }
+    {
       name = "heading"
-      pogo = "h 'h1' (model.text)"
+      pogo = "h 'h2' (model.text)"
     }
     {
       name = "paragraph"
@@ -123,16 +127,17 @@ model = {
       pogo = "h 'a' { href = model.href } (model.text)"
     }
   ]
+
   pages = [
     {
       path = "/"
       title = "Home Page"
-      pogo = "heading (text: 'Home Page')"
+      pogo = "layout(heading (text: 'Home Page'))"
     }
     {
       path = "/about"
       title = "About Us"
-      pogo = "heading (text: 'About Us')\nparagraph (text: 'Coming soon...')"
+      pogo = "layout (\n  heading (text: 'About Us')\n  paragraph (text: 'Coming soon...')\n)"
     }
   ]
 }
