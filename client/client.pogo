@@ -132,12 +132,12 @@ model = {
     {
       path = "/"
       title = "Home Page"
-      pogo = "layout(heading (text: 'Home Page'))"
+      pogo = "layout [\n  heading (text: 'Home Page')\n]"
     }
     {
       path = "/about"
       title = "About Us"
-      pogo = "layout (\n  heading (text: 'About Us')\n  paragraph (text: 'Coming soon...')\n)"
+      pogo = "layout [\n  heading (text: 'About Us')\n  paragraph (text: 'Coming soon...')\n]"
     }
   ]
 }
