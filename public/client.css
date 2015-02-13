@@ -4,43 +4,55 @@ body {
   font-family: Helvetica;
 }
 
-textarea {
-  height: 5em;
-  width: 40em;
-  font-family: 'Source Code Pro', monospace;
-  font-size: 1.1em;
-}
-
 .editor {
   background-color: #efefef;
   padding: 20px;
+  position: fixed;
+  overflow: scroll;
+  right: 0;
+  top: 0;
+  bottom: 0;
 }
 
 .editor h2 {
   color: #336699;
   font-size: 1.1em;
+  margin-top: 0;
 }
 
-.editor h3 {
+.editor h3, .editor .property {
   color: #222;
   font-size: 1em;
+  margin-top: 10px;
   margin-bottom: 2px;
+  font-weight: bold;
 }
 
 .editor section {
-  display: inline-block;
-  overflow: scroll;
-  vertical-align: top;
+  width: 100%;
+  margin-bottom: 30px;
 }
 
-section.pages {
-  width: 15%;
+.editor input.name {
+  display: block;
 }
 
-section.current-page {
-  width: 30%;
+.editor .widget {
+  margin-bottom: 20px;
 }
 
-section.widgets {
-  width: 53%;
+.editor textarea {
+  height: 5em;
+}
+
+.editor textarea.body {
+  height: 10em;
+}
+
+.editor textarea, .editor input {
+  font-family: 'Source Code Pro', monospace;
+  font-size: 1em;
+  width: 30em;
+  border: 1px solid #ccc;
+  margin-top: 3px;
 }

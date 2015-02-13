@@ -1,5 +1,7 @@
 plastiq = require 'plastiq'
+router = require 'plastiq/router'
 pogo = require 'pogo'
+language = require 'language'
 
 h () =
   a = [arguments.0]
@@ -11,36 +13,37 @@ h () =
 
   plastiq.html.apply (plastiq, a)
 
-window.h = h
-window.pogo = pogo
-
 renderPage (model) =
-  window.model = model
+
+  compiled = compilePage(model.currentPage, model.widgets)
+
   h '.blip' (
     h '.page' (
-      [
-        w <- model.currentPage.widgets
-        widget = model.widgetOfType (w.type)
-        widget.render (w, h)
-      ]
+      compiled
     )
     h '.editor' (
-      h 'section.pages' (
-        h 'h2' 'Pages'
-        h 'ul.pages' [
-          page <- model.pages
-          h 'li.page' (
-            h 'a' {
-              href = page.path
-              onclick = router.push
-            } (page.title)
-          )
-        ]
-      )
       h 'section.current-page' (
-        h 'h2' 'Current Page'
-        h 'pre' (
-          JSON.stringify(model.currentPage, null, 2)
+        h '.property' (
+          h '.name' 'title'
+          h '.value' (
+            h 'input' { binding = [model.currentPage, 'title'] }
+          )
+        )
+        h '.property' (
+          h '.name' 'path'
+          h '.value' (
+            h 'input' { binding = [model.currentPage, 'path'] }
+          )
+        )
+        h '.property' (
+          h '.name' 'body'
+          h '.value' (
+            h 'textarea.body' {
+              binding = [model.currentPage, 'pogo']
+              onblur () = true
+              onkeyup () = true
+            }
+          )
         )
       )
       h 'section.widgets' (
@@ -49,7 +52,7 @@ renderPage (model) =
           [
             w <- model.widgets
             h '.widget' (
-              h 'h3' (w.name)
+              h 'input.name' { binding = [w, 'name'] }
               h 'textarea' {
                 binding = [w, 'pogo']
                 onblur (e) = compileWidget(w)
@@ -57,8 +60,41 @@ renderPage (model) =
               }
             )
           ]
+          h '.widget' (
+            h 'button' {
+              onclick (e) =
+                model.widgets.push {
+                  name = 'untitledWidget'
+                  pogo = "'hello'"
+                }
+            } 'New Widget'
+          )
         )
       )
+      h 'section.pages' (
+        h 'h2' 'Pages'
+        h 'ul.pages' [
+          page <- model.pages
+          h 'li.page' (
+            if (page == model.currentPage)
+              h 'span' (page.title)
+            else
+              h 'a' {
+                href = page.path
+                onclick = router.push
+              } (page.title)
+          )
+        ]
+        h 'button' {
+          onclick () =
+            model.pages.push {
+              path = "/untitled"
+              title = "Untitled Page"
+              pogo = "'Unititled Page'"
+            }
+        } 'New Page'
+      )
+
     )
   )
 
@@ -91,20 +127,12 @@ model = {
     {
       path = "/"
       title = "Home Page"
-      widgets = [
-        { type = "heading", text = "Home Page" }
-        { type = "paragraph", text = "Welcome to the site." }
-        { type = "link", text = "About us", href = "/about" }
-      ]
+      pogo = "heading (text: 'Home Page')"
     }
     {
       path = "/about"
       title = "About Us"
-      widgets = [
-        { type = "heading", text = "About Us" }
-        { type = "paragraph", text = "Coming soon..." }
-        { type = "link", text = "Back to home page", href = "/" }
-      ]
+      pogo = "heading (text: 'About Us')\nparagraph (text: 'Coming soon...')"
     }
   ]
 }
@@ -119,42 +147,62 @@ compileWidget(widget) =
         "render() =\n  " + body, { inScope = false }
       ) + "\nreturn render();"
     )
-    widget.render (widget, h)
   catch (e)
     widget.render () =
-      h 'pre' ("Error in #(widget.name)\n" + e.toString())
+      h 'pre' ("Error compiling widget: #(widget.name)\n" + e.toString())
+
+widgetRenderer (widget) =
+  @(opts) @{
+    try
+      widget.render (opts, h)
+    catch (e)
+      h 'pre' ("Error rendering widget: #(widget.name)\n" + e.toString())
+  }
+
+compilePage(page, widgets) =
+  body = page.pogo.split("\n").join("\n  ")
+  try
+    r = @new Function(
+      "model"
+      "h"
+      "var nodes;\n" + pogo.compile (
+        "nodes = [\n  " + body + "\n]", { inScope = false }
+      ) + "; return nodes;"
+    )
+
+    dsl = {}
+    for each @(widget) in (widgets)
+      dsl.(widget.name) = widgetRenderer(widget)
+
+    lang = language(dsl)
+
+    lang (r)
+  catch (e)
+    h 'pre' ("Error compiling page: #(page.title)\n" + e.toString())
 
 for each @(wi) in (model.widgets)
   compileWidget(wi)
 
-router = require 'plastiq/router'
-routerify (vdom) =
-  if (vdom.tagName == 'A')
-    vdom.properties.onclick (e) =
-      console.log("E", e.target.pathname)
-      router.push(e.target.pathname)
-      model.currentPage = model.pageAtPath(e.target.pathname)
-      e.preventDefault()
-  else if (vdom.children :: Array)
-    for each @(child) in (vdom.children)
-      routerify (child)
+window.model = model
+window.h = h
+window.pogo = pogo
 
-  // console.log(h 'a' { onclick () = true })
-  vdom
 
 render (model) =
   router (
     router.page '/' {
       binding = [model, 'currentPage']
       state (params) =
+        console.log("ROOT!")
         @new Promise(
           @(result) @{ result(model.pageAtPath('/')) }
         )
     } @{ renderPage (model) }
 
-    router.page '/:path' {
+    router.page '/:path*' {
       binding = [model, 'currentPage']
       state (params) =
+        console.log("PATH!")
         @new Promise(
           @(result) @{ result(model.pageAtPath('/' + params.path)) }
         )
