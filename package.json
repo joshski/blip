@@ -19,6 +19,7 @@
     "browserify": "^8.0.2",
     "express": "^4.10.6",
     "express-session": "^1.9.3",
+    "firebase": "^2.2.0",
     "language": "^0.4.0",
     "plastiq": "git://github.com/featurist/plastiq.git",
     "pogo": "^0.9.6",

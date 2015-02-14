@@ -2,6 +2,40 @@ plastiq = require 'plastiq'
 router = require 'plastiq/router'
 pogo = require 'pogo'
 language = require 'language'
+Firebase = require 'firebase'
+
+firebaseRef = @new Firebase("https://blippy.firebaseio.com/")
+
+updateModelFromFirebase (refresh) =
+  firebaseRef.child("site").on "value" @(snapshot)
+    value = snapshot.val()
+    if (@not value)
+      return
+
+    model.widgets = []
+    for each @(widget) in (value.widgets || [])
+      model.widgets.push (widget)
+      compileWidget (widget)
+
+    model.pages = []
+    for each @(page) in (value.pages || [])
+      model.pages.push (page)
+
+    model.currentPage = model.pageAtPath(window.location.pathname)
+    refresh ()
+
+updateFirebaseFromModel () =
+  console.log("updating firebase...")
+  firebaseRef.set {
+    site = {
+      widgets = [
+        w <- model.widgets
+        { name = w.name, pogo = w.pogo }
+      ]
+      pages = model.pages
+    }
+  }
+
 
 h () =
   a = [arguments.0]
@@ -14,37 +48,41 @@ h () =
   plastiq.html.apply (plastiq, a)
 
 renderPage (model) =
-
-  compiled = compilePage(model.currentPage, model.widgets)
-
   h '.blip' (
+    plastiq.html.animation(updateModelFromFirebase)
     h '.page' (
-      compiled
+      if (model.currentPage)
+        compilePage(model.currentPage, model.widgets)
     )
     h '.editor' (
       h 'section.current-page' (
-        h '.property' (
-          h '.name' 'title'
-          h '.value' (
-            h 'input' { binding = [model.currentPage, 'title'] }
-          )
-        )
-        h '.property' (
-          h '.name' 'path'
-          h '.value' (
-            h 'input' { binding = [model.currentPage, 'path'] }
-          )
-        )
-        h '.property' (
-          h '.name' 'body'
-          h '.value' (
-            h 'textarea.body' {
-              binding = [model.currentPage, 'pogo']
-              onblur () = true
-              onkeyup () = true
-            }
-          )
-        )
+        if (model.currentPage)
+          [
+            h '.property' (
+              h '.name' 'title'
+              h '.value' (
+                h 'input' { binding = [model.currentPage, 'title'] }
+              )
+            )
+            h '.property' (
+              h '.name' 'path'
+              h '.value' (
+                h 'input' { binding = [model.currentPage, 'path'] }
+              )
+            )
+            h '.property' (
+              h '.name' 'body'
+              h '.value' (
+                h 'textarea.body' {
+                  binding = [model.currentPage, 'pogo']
+                  onblur () =
+                    updateFirebaseFromModel()
+
+                  onkeyup () = true
+                }
+              )
+            )
+          ]
       )
       h 'section.widgets' (
         h 'h2' 'Widgets'
@@ -52,11 +90,19 @@ renderPage (model) =
           [
             w <- model.widgets
             h '.widget' (
-              h 'input.name' { binding = [w, 'name'] }
+              h 'input.name' {
+                binding = [w, 'name']
+                onchange (e) =
+                  compileWidget (w)
+                  updateFirebaseFromModel ()
+              }
               h 'textarea' {
                 binding = [w, 'pogo']
-                onblur (e) = compileWidget(w)
-                onkeyup (e) = compileWidget(w)
+                onblur (e) =
+                  compileWidget (w)
+                  updateFirebaseFromModel ()
+
+                onkeyup (e) = compileWidget (w)
               }
             )
           ]
@@ -67,6 +113,7 @@ renderPage (model) =
                   name = 'untitledWidget'
                   pogo = "'hello'"
                 }
+                updateFirebaseFromModel ()
             } 'New Widget'
           )
         )
@@ -90,8 +137,9 @@ renderPage (model) =
             model.pages.push {
               path = "/untitled"
               title = "Untitled Page"
-              pogo = "'Unititled Page'"
+              pogo = "'Untitled Page'"
             }
+            updateFirebaseFromModel ()
         } 'New Page'
       )
 
@@ -110,35 +158,9 @@ model = {
         return (p)
 
   widgets = [
-    {
-      name = "layout"
-      pogo = "h '.my-website' (\n  h 'h1' 'My Awesome Site'\n  model\n)"
-    }
-    {
-      name = "heading"
-      pogo = "h 'h2' (model.text)"
-    }
-    {
-      name = "paragraph"
-      pogo = "h 'p' (model.text)"
-    }
-    {
-      name = "link"
-      pogo = "h 'a' { href = model.href } (model.text)"
-    }
   ]
 
   pages = [
-    {
-      path = "/"
-      title = "Home Page"
-      pogo = "layout [\n  heading (text: 'Home Page')\n]"
-    }
-    {
-      path = "/about"
-      title = "About Us"
-      pogo = "layout [\n  heading (text: 'About Us')\n  paragraph (text: 'Coming soon...')\n]"
-    }
   ]
 }
 
@@ -180,25 +202,19 @@ compilePage(page, widgets) =
       dsl.(widget.name) = widgetRenderer(widget)
 
     lang = language(dsl)
-
     lang (r)
   catch (e)
     h 'pre' ("Error compiling page: #(page.title)\n" + e.toString())
 
-for each @(wi) in (model.widgets)
-  compileWidget(wi)
-
 window.model = model
 window.h = h
 window.pogo = pogo
-
 
 render (model) =
   router (
     router.page '/' {
       binding = [model, 'currentPage']
       state (params) =
-        console.log("ROOT!")
         @new Promise(
           @(result) @{ result(model.pageAtPath('/')) }
         )
@@ -207,14 +223,10 @@ render (model) =
     router.page '/:path*' {
       binding = [model, 'currentPage']
       state (params) =
-        console.log("PATH!")
         @new Promise(
           @(result) @{ result(model.pageAtPath('/' + params.path)) }
         )
     } @{ renderPage (model) }
   )
-
-model.currentPage = model.pageAtPath(window.location.pathname)
-console.log ("Loading " + window.location.pathname, model.currentPage)
 
 plastiq.attach (document.body, render, model)
